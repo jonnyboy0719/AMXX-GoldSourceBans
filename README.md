@@ -1,0 +1,2 @@
+# AMXX-GoldSourceBans
+SourceBans++ Intregration
