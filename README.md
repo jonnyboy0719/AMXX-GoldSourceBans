@@ -1,5 +1,5 @@
 # AMXX-GoldSourceBans
-SourceBans++ Intregration
+SourceBans++ Integration
 
 This plugin is currently in its 'Alpha' stage, but is functional and can connect to the SourceBans++ database.
 
