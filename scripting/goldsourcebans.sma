@@ -253,6 +253,19 @@ public CVAR_BanPlayer(id, level, cid)
 	read_argv(2, arg2, 31)
 	read_argv(3, arg3, 124)
 
+	// Check if he has access for permanent time
+	if (str_to_num(arg2) == 0 && !access(id, ADMIN_LEVEL_A))
+	{
+		client_print(id, print_console, "You do not have access to ban permanently.")
+		return PLUGIN_HANDLED;
+	}
+	// Then check, if we can ban more than 1 week.
+	else if (str_to_num(arg2) > 10080 && !access(id, ADMIN_LEVEL_A))
+	{
+		client_print(id, print_console, "You do not have access to ban more than 1 week.")
+		return PLUGIN_HANDLED;
+	}
+
 	new player = cmd_target(id, arg, CMDTARGET_OBEY_IMMUNITY | CMDTARGET_ALLOW_SELF)
 
 	new iPlayers[32],
@@ -327,6 +340,19 @@ public CVAR_GagPlayer(id, level, cid)
 	read_argv(2, arg2, 31)
 	read_argv(3, arg3, 31)
 	read_argv(4, arg4, 124)
+
+	// Check if he has access for permanent time
+	if (str_to_num(arg2) == 0 && !access(id, ADMIN_LEVEL_A))
+	{
+		client_print(id, print_console, "You do not have access to gag permanently.")
+		return PLUGIN_HANDLED;
+	}
+	// Then check, if we can gag more than 1 week.
+	else if (str_to_num(arg2) > 10080 && !access(id, ADMIN_LEVEL_A))
+	{
+		client_print(id, print_console, "You do not have access to gag more than 1 week.")
+		return PLUGIN_HANDLED;
+	}
 
 	new type = str_to_num(arg3);
 
@@ -697,6 +723,7 @@ stock BanPlayer(admin, victim, time, banReason[])
 		AdminName[32],
 		Name[32],
 		Ip[64],
+		TimeString[64],
 		Authid[64],
 		AdminIp[64];
 
@@ -729,10 +756,17 @@ stock BanPlayer(admin, victim, time, banReason[])
 
 	server_cmd("kick #%d ^"%s^"", get_user_userid(victim), banReason);
 
-	client_print(0, print_chat, "%s has banned %s for %d minutes! (reason: %s)", AdminName, Name, time, banReason);
+	if (time == 0)
+		format(TimeString, sizeof(TimeString), "permanently")
+	else if (time == 1)
+		format(TimeString, sizeof(TimeString), "for %d minute", time)
+	else
+		format(TimeString, sizeof(TimeString), "for %d minutes", time)
+
+	client_print(0, print_chat, "%s has banned %s %s! (reason: %s)", AdminName, Name, TimeString, banReason);
 
 	new formated_text[501];
-	format(formated_text, 500, "[SourceBans] %s has banned %s for %d minutes! (reason: %s)", AdminName, Name, time, banReason);
+	format(formated_text, 500, "[SourceBans] %s has banned %s %s! (reason: %s)", AdminName, Name, TimeString, banReason);
 	PrintToAll(formated_text)
 }
 
@@ -756,6 +790,7 @@ stock GagPlayer(admin, victim, time, type, banReason[], bool:IsSilence)
 		Ip[64],
 		Authid[64],
 		TypeName[64],
+		TimeString[64],
 		AdminIp[64];
 
 	replace_all( banReason, 2500, "`", "");
@@ -809,14 +844,19 @@ stock GagPlayer(admin, victim, time, type, banReason[], bool:IsSilence)
 			gag_chat[victim] = true;
 		}
 
-		client_print(admin, print_chat, "%s has been %s for %d minutes! (reason: %s)", Name, TypeName, time, banReason);
+		log_amx("GoldSourceBans CMD: ^"%s<%d><%s><>^" has %s ^"%s<%d><%s><>^" %s - reason: ^"%s^"", AdminName, get_user_userid(admin), AdminAuthid, TypeName, Name, get_user_userid(victim), Authid, TimeString, banReason)
 
-		log_amx("GoldSourceBans CMD: ^"%s<%d><%s><>^" has %s ^"%s<%d><%s><>^" for %d minutes - reason: ^"%s^"", AdminName, get_user_userid(admin), AdminAuthid, TypeName, Name, get_user_userid(victim), Authid, time, banReason)
+		if (time == 0)
+			format(TimeString, sizeof(TimeString), "permanently")
+		else if (time == 1)
+			format(TimeString, sizeof(TimeString), "for %d minute", time)
+		else
+			format(TimeString, sizeof(TimeString), "for %d minutes", time)
 
 		new formated_text[501];
-		format(formated_text, 500, "[SourceBans] ^"%s<%s>^" has %s ^"%s<%s>^" for %d minutes - reason: ^"%s^"", AdminName, AdminAuthid, TypeName, Name, Authid, time, banReason)
+		format(formated_text, 500, "[SourceBans] ^"%s<%s>^" has %s ^"%s<%s>^" %s - reason: ^"%s^"", AdminName, AdminAuthid, TypeName, Name, Authid, TimeString, banReason)
 		PrintToAdmins(formated_text)
-		format(formated_text, 500, "[SourceBans] ^"%s^" has %s ^"%s^" for %d minutes - reason: ^"%s^"", AdminName, TypeName, Name, time, banReason)
+		format(formated_text, 500, "[SourceBans] ^"%s^" has %s ^"%s^" %s - reason: ^"%s^"", AdminName, TypeName, Name, TimeString, banReason)
 		PrintToNonAdmin(formated_text)
 
 		// Lets gag on chat, if silence is on
@@ -1011,6 +1051,7 @@ public CheckGaggedPlayers(FailState, Handle:Query, Error[], Errcode, Data[], Dat
 				gag_chat[id] = true;
 				TypeName = "gagged";
 			}
+			log_amx("client %d has type: %d", id, sql_type)
 			//-----------------------
 		}
 
