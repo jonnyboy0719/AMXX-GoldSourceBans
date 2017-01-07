@@ -14,6 +14,7 @@
 #define PLUGIN						"GoldSourcebans"
 #define AUTHOR						"JonnyBoy0719"
 #define VERSION						"1.0"
+#define MaxClients					32
 
 // MySQL
 new mysqlx_host,
@@ -29,7 +30,8 @@ new mysqlx_host,
 
 new DatabasePrefix[10] = "sb",
 	WebsiteAddress[128],
-	serverID = -1;
+	serverID = -1,
+	bool:HasLoadedBans = false;
 
 new ServerIP[24],
 	ServerPort[7];
@@ -588,7 +590,8 @@ public plugin_end()
 
 public client_authorized(id)
 {
-	CheckIfBanned(id)
+	if (IsValidClient(id, false))
+		CheckIfBanned(id);
 }
 
 //------------------
@@ -976,6 +979,18 @@ stock UnGagPlayer(admin, victim, type, banMessage[], bool:IsSilence)
 		UnGagPlayer(admin, victim, 2, banMessage, true)
 }
 
+//------------------
+//	IsValidClient()
+//------------------
+
+stock bool:IsValidClient(client, bool:bCheckAlive = true)
+{
+	if(client < 1 || client > MaxClients) return false;
+	if(!is_user_connected(client)) return false;
+	if(bCheckAlive) return is_user_alive(client);
+	return true;
+}
+
 // ============================================================//
 //                          [~ MySQL DATA ~]			       //
 // ============================================================//
@@ -1003,6 +1018,8 @@ public SQL_Init()
 
 	if (sql_api == Empty_Handle)
 		server_print("[AMXX] %L", LANG_SERVER, "SQL_CANT_CON", sql_error);
+
+	HasLoadedBans = true;
 }
 
 //------------------
@@ -1074,6 +1091,14 @@ public CheckGaggedPlayers(FailState, Handle:Query, Error[], Errcode, Data[], Dat
 
 public CheckBannedPlayer(FailState, Handle:Query, Error[], Errcode, Data[], DataSize)
 {
+	new id = Data[0];
+
+	if (!HasLoadedBans)
+	{
+		set_task(1.5, "CheckIfBanned", id);
+		return server_print("Server has just started, checking Bans in 1.5 seconds instead...")
+	}
+
 	if (FailState == TQUERY_CONNECT_FAILED)
 		return set_fail_state("Could not connect to SQL database.")
 	else if (FailState == TQUERY_QUERY_FAILED)
@@ -1081,8 +1106,6 @@ public CheckBannedPlayer(FailState, Handle:Query, Error[], Errcode, Data[], Data
 
 	if (Errcode)
 		return log_amx("Error on query: %s",Error)
-
-	new id = Data[0];
 
 	if (!id)
 		return PLUGIN_CONTINUE;
